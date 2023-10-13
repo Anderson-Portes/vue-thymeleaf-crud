@@ -1,0 +1,220 @@
+<main th:replace="layouts/app::layout(~{::main})">
+  <div id="app">
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <div class="d-flex w-100 justify-content-between">
+              <h5>Projects List</h5>
+              <button
+                type="button"
+                class="btn btn-sm btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#modal-form"
+                @click="() => {
+                  success = null;
+                  Object.assign(form,initialForm)
+                }"
+              >
+                Create Project
+              </button>
+            </div>
+          </div>
+          <div class="card-body table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <th>Name</th>
+                <th>Server</th>
+                <th>Ftp</th>
+                <th>User</th>
+                <th>Password</th>
+                <th>Register</th>
+                <th>Code</th>
+                <th></th>
+              </thead>
+              <tbody>
+                <tr v-for="project in projects">
+                  <td>{{ project.name }}</td>
+                  <td>{{ project.server }}</td>
+                  <td>{{ project.ftp }}</td>
+                  <td>{{ project.user }}</td>
+                  <td>{{ project.password }}</td>
+                  <td>{{ project.register }}</td>
+                  <td>{{ project.code }}</td>
+                  <td>
+                    <button
+                      class="btn btn-sm btn-outline-success me-1"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modal-form"
+                      @click="() => {
+                        success = null;
+                        Object.assign(form,project)
+                      }"
+                    >
+                      <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-danger"
+                      @click="deleteProject(project.id)"
+                    >
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="modal fade"
+      id="modal-form"
+      tabindex="-1"
+      aria-labelledby="modal-label"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="modal-label">
+              {{ form.id ? 'Edit' : 'Create' }} Project
+            </h1>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-success" v-if="success">{{ success }}</div>
+            <form @submit.prevent="handleSubmit">
+              <div class="form-floating mb-2">
+                <input
+                  class="form-control"
+                  id="name"
+                  placeholder="Name"
+                  v-model="form.name"
+                />
+                <label for="name">Name</label>
+              </div>
+              <div class="form-floating mb-2">
+                <input
+                  class="form-control"
+                  id="server"
+                  placeholder="Server"
+                  v-model="form.server"
+                />
+                <label for="server">Server</label>
+              </div>
+              <div class="form-floating mb-2">
+                <input
+                  class="form-control"
+                  id="ftp"
+                  placeholder="Ftp"
+                  v-model="form.ftp"
+                />
+                <label for="ftp">Ftp</label>
+              </div>
+              <div class="form-floating mb-2">
+                <input
+                  class="form-control"
+                  id="user"
+                  placeholder="User"
+                  v-model="form.user"
+                />
+                <label for="user">User</label>
+              </div>
+              <div class="form-floating mb-2">
+                <input
+                  class="form-control"
+                  id="password"
+                  placeholder="Password"
+                  v-model="form.password"
+                />
+                <label for="password">Password</label>
+              </div>
+              <div class="form-floating mb-2">
+                <input
+                  class="form-control"
+                  id="register"
+                  placeholder="Register"
+                  v-model="form.register"
+                />
+                <label for="register">Register</label>
+              </div>
+              <div class="form-floating mb-2">
+                <input
+                  class="form-control"
+                  id="code"
+                  placeholder="Code"
+                  v-model="form.code"
+                />
+                <label for="code">Code</label>
+              </div>
+              <button class="btn btn-sm btn-primary" :disabled="form.loading">
+                <template v-if="!form.loading">Save</template>
+                <template v-else>
+                  <div class="spinner-border text-white" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                </template>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const { onMounted, ref, reactive } = Vue;
+    Vue.createApp({
+      setup() {
+        const projects = ref([]);
+        const initialForm = {
+          id: null,
+          loading: false,
+          name: "",
+          server: "",
+          ftp: "",
+          user: "",
+          password: "",
+          register: "",
+          code: "",
+        };
+        const form = reactive({ ...initialForm });
+        const success = ref(null);
+        const fetchProjects = async () => {
+          const { data } = await axios.get("/api/projects/");
+          projects.value = data;
+        };
+        const handleSubmit = async () => {
+          success.value = null;
+          form.loading = true;
+          form.errors = {};
+          await (form.id
+            ? axios.put("/api/projects/" + form.id, form)
+            : axios.post("/api/projects/", form));
+          await fetchProjects();
+          success.value = "Project saved successfully.";
+          form.loading = false;
+        };
+        const deleteProject = async (id) => {
+          if (!confirm("Do you want to delete this project?")) return;
+          await axios.delete("/api/projects/" + id);
+          await fetchProjects();
+        };
+        onMounted(fetchProjects);
+        return {
+          projects,
+          form,
+          handleSubmit,
+          deleteProject,
+          initialForm,
+          success,
+        };
+      },
+    }).mount("#app");
+  </script>
+</main>
